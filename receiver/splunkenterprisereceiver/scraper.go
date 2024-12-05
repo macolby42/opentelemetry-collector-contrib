@@ -1744,7 +1744,7 @@ func (s *splunkScraper) scrapeHealth(ctx context.Context, now pcommon.Timestamp,
 	ctx = context.WithValue(ctx, endpointType("type"), typeCm)
 
 	ept := apiDict[`SplunkHealth`]
-	var hd HealthDetails
+	var ha HealthArtifacts
 
 	req, err := s.splunkClient.createAPIRequest(ctx, ept)
 	if err != nil {
@@ -1759,25 +1759,30 @@ func (s *splunkScraper) scrapeHealth(ctx context.Context, now pcommon.Timestamp,
 	}
 	defer res.Body.Close()
 
-	if err := json.NewDecoder(res.Body).Decode(&hd); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&ha); err != nil {
 		errs <- err
 		return
 	}
 
-	s.traverseHealthDetailFeatures(hd.Features, now)
+	s.settings.Logger.Debug(fmt.Sprintf("Features: %s", ha.Entries))
+	for _, details := range ha.Entries {
+		s.traverseHealthDetailFeatures(details.Content, now)
+	}
 }
 
-func (s *splunkScraper) traverseHealthDetailFeatures(features map[string]HealthDetails, now pcommon.Timestamp) {
-	if features == nil {
+func (s *splunkScraper) traverseHealthDetailFeatures(details HealthDetails, now pcommon.Timestamp) {
+	if details.Features == nil {
 		return
 	}
 
-	for k, feature := range features {
+	for k, feature := range details.Features {
 		if feature.Health != "red" {
+			s.settings.Logger.Debug(feature.Health)
 			s.mb.RecordSplunkHealthDataPoint(now, 1, k, feature.Health)
 		} else {
+			s.settings.Logger.Debug(feature.Health)
 			s.mb.RecordSplunkHealthDataPoint(now, 0, k, feature.Health)
 		}
-		s.traverseHealthDetailFeatures(feature.Features, now)
+		s.traverseHealthDetailFeatures(feature, now)
 	}
 }

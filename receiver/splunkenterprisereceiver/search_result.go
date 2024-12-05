@@ -159,6 +159,14 @@ type DispatchArtifactContent struct {
 }
 
 // '/services/server/health/splunkd/details
+type HealthArtifacts struct {
+	Entries []HealthArtifactEntry `json:"entry"`
+}
+
+type HealthArtifactEntry struct {
+	Content HealthDetails `json:"content"`
+}
+
 type HealthDetails struct {
 	Health   string                   `json:"health"`
 	Features map[string]HealthDetails `json:"features,omitempty"`
