@@ -147,6 +147,9 @@ func TestMetricsBuilder(t *testing.T) {
 			allMetricsCount++
 			mb.RecordSplunkLicenseIndexUsageDataPoint(ts, 1, "splunk.index.name-val")
 
+			allMetricsCount++
+			mb.RecordSplunkLoginStatuscodeDataPoint(ts, 1)
+
 			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordSplunkParseQueueRatioDataPoint(ts, 1, "splunk.host-val")
@@ -619,6 +622,18 @@ func TestMetricsBuilder(t *testing.T) {
 					attrVal, ok := dp.Attributes().Get("splunk.index.name")
 					assert.True(t, ok)
 					assert.EqualValues(t, "splunk.index.name-val", attrVal.Str())
+				case "splunk.login.statuscode":
+					assert.False(t, validatedMetrics["splunk.login.statuscode"], "Found a duplicate in the metrics slice: splunk.login.statuscode")
+					validatedMetrics["splunk.login.statuscode"] = true
+					assert.Equal(t, pmetric.MetricTypeGauge, ms.At(i).Type())
+					assert.Equal(t, 1, ms.At(i).Gauge().DataPoints().Len())
+					assert.Equal(t, "Gauge indicating the HTTP status code of the Splunk Login API", ms.At(i).Description())
+					assert.Equal(t, "{status}", ms.At(i).Unit())
+					dp := ms.At(i).Gauge().DataPoints().At(0)
+					assert.Equal(t, start, dp.StartTimestamp())
+					assert.Equal(t, ts, dp.Timestamp())
+					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+					assert.Equal(t, int64(1), dp.IntValue())
 				case "splunk.parse.queue.ratio":
 					assert.False(t, validatedMetrics["splunk.parse.queue.ratio"], "Found a duplicate in the metrics slice: splunk.parse.queue.ratio")
 					validatedMetrics["splunk.parse.queue.ratio"] = true

@@ -351,7 +351,7 @@ metrics:
       aggregation_temporality: cumulative
       value_type: int
     attributes: [splunk.host]
-  #`services/server/health/splunkd/details`
+  #'services/server/health/splunkd/details'
   splunk.health:
     enabled: false
     description: The status ('red', 'yellow', or 'green') of the Splunk server. Health of 'red' produces a 0 while all other colors produce a 1.
@@ -359,6 +359,13 @@ metrics:
     gauge:
       value_type: int
     attributes: [splunk.feature, splunk.feature.health]
+  #'probe?check=login'
+  splunk.login.statuscode:
+    enabled: false
+    description: Gauge indicating the HTTP status code of the Splunk Login API
+    unit: "{status}"
+    gauge:
+      value_type: int
 
 tests:
   config:

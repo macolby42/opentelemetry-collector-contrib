@@ -102,6 +102,7 @@ func (s *splunkScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		s.scrapeKVStoreStatus,
 		s.scrapeSearchArtifacts,
 		s.scrapeHealth,
+		s.scrapeLogin,
 	}
 	errChan := make(chan error, len(metricScrapes))
 
@@ -1785,4 +1786,28 @@ func (s *splunkScraper) traverseHealthDetailFeatures(details healthDetails, now 
 		}
 		s.traverseHealthDetailFeatures(feature, now)
 	}
+}
+
+func (s *splunkScraper) scrapeLogin(ctx context.Context, now pcommon.Timestamp, errs chan error) {
+	if !s.conf.MetricsBuilderConfig.Metrics.SplunkLoginStatuscode.Enabled {
+		return
+	}
+
+	ctx = context.WithValue(ctx, endpointType("type"), typeCm)
+
+	ept := apiDict[`SplunkLogin`]
+
+	req, err := s.splunkClient.createAPIRequest(ctx, ept)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	res, err := s.splunkClient.makeRequest(req)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	s.mb.RecordSplunkLoginStatuscodeDataPoint(now, int64(res.StatusCode))
 }

@@ -1293,6 +1293,55 @@ func newMetricSplunkLicenseIndexUsage(cfg MetricConfig) metricSplunkLicenseIndex
 	return m
 }
 
+type metricSplunkLoginStatuscode struct {
+	data     pmetric.Metric // data buffer for generated metric.
+	config   MetricConfig   // metric config provided by user.
+	capacity int            // max observed number of data points added to the metric.
+}
+
+// init fills splunk.login.statuscode metric with initial data.
+func (m *metricSplunkLoginStatuscode) init() {
+	m.data.SetName("splunk.login.statuscode")
+	m.data.SetDescription("Gauge indicating the HTTP status code of the Splunk Login API")
+	m.data.SetUnit("{status}")
+	m.data.SetEmptyGauge()
+}
+
+func (m *metricSplunkLoginStatuscode) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
+	if !m.config.Enabled {
+		return
+	}
+	dp := m.data.Gauge().DataPoints().AppendEmpty()
+	dp.SetStartTimestamp(start)
+	dp.SetTimestamp(ts)
+	dp.SetIntValue(val)
+}
+
+// updateCapacity saves max length of data point slices that will be used for the slice capacity.
+func (m *metricSplunkLoginStatuscode) updateCapacity() {
+	if m.data.Gauge().DataPoints().Len() > m.capacity {
+		m.capacity = m.data.Gauge().DataPoints().Len()
+	}
+}
+
+// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
+func (m *metricSplunkLoginStatuscode) emit(metrics pmetric.MetricSlice) {
+	if m.config.Enabled && m.data.Gauge().DataPoints().Len() > 0 {
+		m.updateCapacity()
+		m.data.MoveTo(metrics.AppendEmpty())
+		m.init()
+	}
+}
+
+func newMetricSplunkLoginStatuscode(cfg MetricConfig) metricSplunkLoginStatuscode {
+	m := metricSplunkLoginStatuscode{config: cfg}
+	if cfg.Enabled {
+		m.data = pmetric.NewMetric()
+		m.init()
+	}
+	return m
+}
+
 type metricSplunkParseQueueRatio struct {
 	data     pmetric.Metric // data buffer for generated metric.
 	config   MetricConfig   // metric config provided by user.
@@ -2143,6 +2192,7 @@ type MetricsBuilder struct {
 	metricSplunkKvstoreReplicationStatus              metricSplunkKvstoreReplicationStatus
 	metricSplunkKvstoreStatus                         metricSplunkKvstoreStatus
 	metricSplunkLicenseIndexUsage                     metricSplunkLicenseIndexUsage
+	metricSplunkLoginStatuscode                       metricSplunkLoginStatuscode
 	metricSplunkParseQueueRatio                       metricSplunkParseQueueRatio
 	metricSplunkPipelineSetCount                      metricSplunkPipelineSetCount
 	metricSplunkSchedulerAvgExecutionLatency          metricSplunkSchedulerAvgExecutionLatency
@@ -2210,6 +2260,7 @@ func NewMetricsBuilder(mbc MetricsBuilderConfig, settings receiver.Settings, opt
 		metricSplunkKvstoreReplicationStatus:              newMetricSplunkKvstoreReplicationStatus(mbc.Metrics.SplunkKvstoreReplicationStatus),
 		metricSplunkKvstoreStatus:                         newMetricSplunkKvstoreStatus(mbc.Metrics.SplunkKvstoreStatus),
 		metricSplunkLicenseIndexUsage:                     newMetricSplunkLicenseIndexUsage(mbc.Metrics.SplunkLicenseIndexUsage),
+		metricSplunkLoginStatuscode:                       newMetricSplunkLoginStatuscode(mbc.Metrics.SplunkLoginStatuscode),
 		metricSplunkParseQueueRatio:                       newMetricSplunkParseQueueRatio(mbc.Metrics.SplunkParseQueueRatio),
 		metricSplunkPipelineSetCount:                      newMetricSplunkPipelineSetCount(mbc.Metrics.SplunkPipelineSetCount),
 		metricSplunkSchedulerAvgExecutionLatency:          newMetricSplunkSchedulerAvgExecutionLatency(mbc.Metrics.SplunkSchedulerAvgExecutionLatency),
@@ -2316,6 +2367,7 @@ func (mb *MetricsBuilder) EmitForResource(options ...ResourceMetricsOption) {
 	mb.metricSplunkKvstoreReplicationStatus.emit(ils.Metrics())
 	mb.metricSplunkKvstoreStatus.emit(ils.Metrics())
 	mb.metricSplunkLicenseIndexUsage.emit(ils.Metrics())
+	mb.metricSplunkLoginStatuscode.emit(ils.Metrics())
 	mb.metricSplunkParseQueueRatio.emit(ils.Metrics())
 	mb.metricSplunkPipelineSetCount.emit(ils.Metrics())
 	mb.metricSplunkSchedulerAvgExecutionLatency.emit(ils.Metrics())
@@ -2476,6 +2528,11 @@ func (mb *MetricsBuilder) RecordSplunkKvstoreStatusDataPoint(ts pcommon.Timestam
 // RecordSplunkLicenseIndexUsageDataPoint adds a data point to splunk.license.index.usage metric.
 func (mb *MetricsBuilder) RecordSplunkLicenseIndexUsageDataPoint(ts pcommon.Timestamp, val int64, splunkIndexNameAttributeValue string) {
 	mb.metricSplunkLicenseIndexUsage.recordDataPoint(mb.startTime, ts, val, splunkIndexNameAttributeValue)
+}
+
+// RecordSplunkLoginStatuscodeDataPoint adds a data point to splunk.login.statuscode metric.
+func (mb *MetricsBuilder) RecordSplunkLoginStatuscodeDataPoint(ts pcommon.Timestamp, val int64) {
+	mb.metricSplunkLoginStatuscode.recordDataPoint(mb.startTime, ts, val)
 }
 
 // RecordSplunkParseQueueRatioDataPoint adds a data point to splunk.parse.queue.ratio metric.
