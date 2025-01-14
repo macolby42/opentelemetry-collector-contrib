@@ -28,6 +28,7 @@ func (ms *MetricConfig) Unmarshal(parser *confmap.Conf) error {
 // MetricsConfig provides config for splunkenterprise metrics.
 type MetricsConfig struct {
 	SplunkAggregationQueueRatio                 MetricConfig `mapstructure:"splunk.aggregation.queue.ratio"`
+	SplunkAuthzRolesStatuscode                  MetricConfig `mapstructure:"splunk.authz.roles.statuscode"`
 	SplunkBucketsSearchableStatus               MetricConfig `mapstructure:"splunk.buckets.searchable.status"`
 	SplunkDataIndexesExtendedBucketCount        MetricConfig `mapstructure:"splunk.data.indexes.extended.bucket.count"`
 	SplunkDataIndexesExtendedBucketEventCount   MetricConfig `mapstructure:"splunk.data.indexes.extended.bucket.event.count"`
@@ -74,6 +75,9 @@ func DefaultMetricsConfig() MetricsConfig {
 	return MetricsConfig{
 		SplunkAggregationQueueRatio: MetricConfig{
 			Enabled: true,
+		},
+		SplunkAuthzRolesStatuscode: MetricConfig{
+			Enabled: false,
 		},
 		SplunkBucketsSearchableStatus: MetricConfig{
 			Enabled: true,

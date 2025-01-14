@@ -63,6 +63,9 @@ func TestMetricsBuilder(t *testing.T) {
 			allMetricsCount++
 			mb.RecordSplunkAggregationQueueRatioDataPoint(ts, 1, "splunk.host-val")
 
+			allMetricsCount++
+			mb.RecordSplunkAuthzRolesStatuscodeDataPoint(ts, 1)
+
 			defaultMetricsCount++
 			allMetricsCount++
 			mb.RecordSplunkBucketsSearchableStatusDataPoint(ts, 1, "splunk.host-val", "splunk.indexer.searchable-val")
@@ -238,6 +241,18 @@ func TestMetricsBuilder(t *testing.T) {
 					attrVal, ok := dp.Attributes().Get("splunk.host")
 					assert.True(t, ok)
 					assert.EqualValues(t, "splunk.host-val", attrVal.Str())
+				case "splunk.authz.roles.statuscode":
+					assert.False(t, validatedMetrics["splunk.authz.roles.statuscode"], "Found a duplicate in the metrics slice: splunk.authz.roles.statuscode")
+					validatedMetrics["splunk.authz.roles.statuscode"] = true
+					assert.Equal(t, pmetric.MetricTypeGauge, ms.At(i).Type())
+					assert.Equal(t, 1, ms.At(i).Gauge().DataPoints().Len())
+					assert.Equal(t, "Gauge tracking the HTTP status code received from the services/authorization/roles endpoint.", ms.At(i).Description())
+					assert.Equal(t, "{status}", ms.At(i).Unit())
+					dp := ms.At(i).Gauge().DataPoints().At(0)
+					assert.Equal(t, start, dp.StartTimestamp())
+					assert.Equal(t, ts, dp.Timestamp())
+					assert.Equal(t, pmetric.NumberDataPointValueTypeInt, dp.ValueType())
+					assert.Equal(t, int64(1), dp.IntValue())
 				case "splunk.buckets.searchable.status":
 					assert.False(t, validatedMetrics["splunk.buckets.searchable.status"], "Found a duplicate in the metrics slice: splunk.buckets.searchable.status")
 					validatedMetrics["splunk.buckets.searchable.status"] = true

@@ -62,6 +62,55 @@ func newMetricSplunkAggregationQueueRatio(cfg MetricConfig) metricSplunkAggregat
 	return m
 }
 
+type metricSplunkAuthzRolesStatuscode struct {
+	data     pmetric.Metric // data buffer for generated metric.
+	config   MetricConfig   // metric config provided by user.
+	capacity int            // max observed number of data points added to the metric.
+}
+
+// init fills splunk.authz.roles.statuscode metric with initial data.
+func (m *metricSplunkAuthzRolesStatuscode) init() {
+	m.data.SetName("splunk.authz.roles.statuscode")
+	m.data.SetDescription("Gauge tracking the HTTP status code received from the services/authorization/roles endpoint.")
+	m.data.SetUnit("{status}")
+	m.data.SetEmptyGauge()
+}
+
+func (m *metricSplunkAuthzRolesStatuscode) recordDataPoint(start pcommon.Timestamp, ts pcommon.Timestamp, val int64) {
+	if !m.config.Enabled {
+		return
+	}
+	dp := m.data.Gauge().DataPoints().AppendEmpty()
+	dp.SetStartTimestamp(start)
+	dp.SetTimestamp(ts)
+	dp.SetIntValue(val)
+}
+
+// updateCapacity saves max length of data point slices that will be used for the slice capacity.
+func (m *metricSplunkAuthzRolesStatuscode) updateCapacity() {
+	if m.data.Gauge().DataPoints().Len() > m.capacity {
+		m.capacity = m.data.Gauge().DataPoints().Len()
+	}
+}
+
+// emit appends recorded metric data to a metrics slice and prepares it for recording another set of data points.
+func (m *metricSplunkAuthzRolesStatuscode) emit(metrics pmetric.MetricSlice) {
+	if m.config.Enabled && m.data.Gauge().DataPoints().Len() > 0 {
+		m.updateCapacity()
+		m.data.MoveTo(metrics.AppendEmpty())
+		m.init()
+	}
+}
+
+func newMetricSplunkAuthzRolesStatuscode(cfg MetricConfig) metricSplunkAuthzRolesStatuscode {
+	m := metricSplunkAuthzRolesStatuscode{config: cfg}
+	if cfg.Enabled {
+		m.data = pmetric.NewMetric()
+		m.init()
+	}
+	return m
+}
+
 type metricSplunkBucketsSearchableStatus struct {
 	data     pmetric.Metric // data buffer for generated metric.
 	config   MetricConfig   // metric config provided by user.
@@ -2119,6 +2168,7 @@ type MetricsBuilder struct {
 	metricsBuffer                                     pmetric.Metrics      // accumulates metrics data before emitting.
 	buildInfo                                         component.BuildInfo  // contains version information.
 	metricSplunkAggregationQueueRatio                 metricSplunkAggregationQueueRatio
+	metricSplunkAuthzRolesStatuscode                  metricSplunkAuthzRolesStatuscode
 	metricSplunkBucketsSearchableStatus               metricSplunkBucketsSearchableStatus
 	metricSplunkDataIndexesExtendedBucketCount        metricSplunkDataIndexesExtendedBucketCount
 	metricSplunkDataIndexesExtendedBucketEventCount   metricSplunkDataIndexesExtendedBucketEventCount
@@ -2186,6 +2236,7 @@ func NewMetricsBuilder(mbc MetricsBuilderConfig, settings receiver.Settings, opt
 		metricsBuffer:                       pmetric.NewMetrics(),
 		buildInfo:                           settings.BuildInfo,
 		metricSplunkAggregationQueueRatio:   newMetricSplunkAggregationQueueRatio(mbc.Metrics.SplunkAggregationQueueRatio),
+		metricSplunkAuthzRolesStatuscode:    newMetricSplunkAuthzRolesStatuscode(mbc.Metrics.SplunkAuthzRolesStatuscode),
 		metricSplunkBucketsSearchableStatus: newMetricSplunkBucketsSearchableStatus(mbc.Metrics.SplunkBucketsSearchableStatus),
 		metricSplunkDataIndexesExtendedBucketCount:        newMetricSplunkDataIndexesExtendedBucketCount(mbc.Metrics.SplunkDataIndexesExtendedBucketCount),
 		metricSplunkDataIndexesExtendedBucketEventCount:   newMetricSplunkDataIndexesExtendedBucketEventCount(mbc.Metrics.SplunkDataIndexesExtendedBucketEventCount),
@@ -2292,6 +2343,7 @@ func (mb *MetricsBuilder) EmitForResource(options ...ResourceMetricsOption) {
 	ils.Scope().SetVersion(mb.buildInfo.Version)
 	ils.Metrics().EnsureCapacity(mb.metricsCapacity)
 	mb.metricSplunkAggregationQueueRatio.emit(ils.Metrics())
+	mb.metricSplunkAuthzRolesStatuscode.emit(ils.Metrics())
 	mb.metricSplunkBucketsSearchableStatus.emit(ils.Metrics())
 	mb.metricSplunkDataIndexesExtendedBucketCount.emit(ils.Metrics())
 	mb.metricSplunkDataIndexesExtendedBucketEventCount.emit(ils.Metrics())
@@ -2356,6 +2408,11 @@ func (mb *MetricsBuilder) Emit(options ...ResourceMetricsOption) pmetric.Metrics
 // RecordSplunkAggregationQueueRatioDataPoint adds a data point to splunk.aggregation.queue.ratio metric.
 func (mb *MetricsBuilder) RecordSplunkAggregationQueueRatioDataPoint(ts pcommon.Timestamp, val float64, splunkHostAttributeValue string) {
 	mb.metricSplunkAggregationQueueRatio.recordDataPoint(mb.startTime, ts, val, splunkHostAttributeValue)
+}
+
+// RecordSplunkAuthzRolesStatuscodeDataPoint adds a data point to splunk.authz.roles.statuscode metric.
+func (mb *MetricsBuilder) RecordSplunkAuthzRolesStatuscodeDataPoint(ts pcommon.Timestamp, val int64) {
+	mb.metricSplunkAuthzRolesStatuscode.recordDataPoint(mb.startTime, ts, val)
 }
 
 // RecordSplunkBucketsSearchableStatusDataPoint adds a data point to splunk.buckets.searchable.status metric.

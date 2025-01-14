@@ -102,6 +102,7 @@ func (s *splunkScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		s.scrapeKVStoreStatus,
 		s.scrapeSearchArtifacts,
 		s.scrapeHealth,
+		s.scrapeRoles,
 	}
 	errChan := make(chan error, len(metricScrapes))
 
@@ -1785,4 +1786,29 @@ func (s *splunkScraper) traverseHealthDetailFeatures(details healthDetails, now 
 		}
 		s.traverseHealthDetailFeatures(feature, now)
 	}
+}
+
+// Scrape Roles Endpoint
+func (s *splunkScraper) scrapeRoles(ctx context.Context, now pcommon.Timestamp, errs chan error) {
+	if !s.conf.MetricsBuilderConfig.Metrics.SplunkAuthzRolesStatuscode.Enabled {
+		return
+	}
+
+	ctx = context.WithValue(ctx, endpointType("type"), typeSh)
+
+	ept := apiDict[`SplunkAuthzRolesStatuscode`]
+
+	req, err := s.splunkClient.createAPIRequest(ctx, ept)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	res, err := s.splunkClient.makeRequest(req)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	s.mb.RecordSplunkAuthzRolesStatuscodeDataPoint(now, int64(res.StatusCode))
 }

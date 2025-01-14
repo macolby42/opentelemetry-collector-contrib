@@ -289,6 +289,14 @@ metrics:
     enabled: true
 ```
 
+### splunk.authz.roles.statuscode
+
+Gauge tracking the HTTP status code received from the services/authorization/roles endpoint.
+
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {status} | Gauge | Int |
+
 ### splunk.data.indexes.extended.bucket.count
 
 Count of buckets per index

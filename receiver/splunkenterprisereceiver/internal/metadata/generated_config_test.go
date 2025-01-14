@@ -26,6 +26,7 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
 					SplunkAggregationQueueRatio:                 MetricConfig{Enabled: true},
+					SplunkAuthzRolesStatuscode:                  MetricConfig{Enabled: true},
 					SplunkBucketsSearchableStatus:               MetricConfig{Enabled: true},
 					SplunkDataIndexesExtendedBucketCount:        MetricConfig{Enabled: true},
 					SplunkDataIndexesExtendedBucketEventCount:   MetricConfig{Enabled: true},
@@ -74,6 +75,7 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
 					SplunkAggregationQueueRatio:                 MetricConfig{Enabled: false},
+					SplunkAuthzRolesStatuscode:                  MetricConfig{Enabled: false},
 					SplunkBucketsSearchableStatus:               MetricConfig{Enabled: false},
 					SplunkDataIndexesExtendedBucketCount:        MetricConfig{Enabled: false},
 					SplunkDataIndexesExtendedBucketEventCount:   MetricConfig{Enabled: false},

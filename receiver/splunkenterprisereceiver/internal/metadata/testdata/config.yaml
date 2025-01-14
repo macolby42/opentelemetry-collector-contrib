@@ -3,6 +3,8 @@ all_set:
   metrics:
     splunk.aggregation.queue.ratio:
       enabled: true
+    splunk.authz.roles.statuscode:
+      enabled: true
     splunk.buckets.searchable.status:
       enabled: true
     splunk.data.indexes.extended.bucket.count:
@@ -86,6 +88,8 @@ all_set:
 none_set:
   metrics:
     splunk.aggregation.queue.ratio:
+      enabled: false
+    splunk.authz.roles.statuscode:
       enabled: false
     splunk.buckets.searchable.status:
       enabled: false

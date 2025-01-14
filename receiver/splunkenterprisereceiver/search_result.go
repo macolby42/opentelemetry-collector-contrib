@@ -20,12 +20,13 @@ var searchDict = map[string]string{
 }
 
 var apiDict = map[string]string{
-	`SplunkIndexerThroughput`:   `/services/server/introspection/indexer?output_mode=json`,
-	`SplunkDataIndexesExtended`: `/services/data/indexes-extended?output_mode=json&count=-1`,
-	`SplunkIntrospectionQueues`: `/services/server/introspection/queues?output_mode=json&count=-1`,
-	`SplunkKVStoreStatus`:       `/services/kvstore/status?output_mode=json`,
-	`SplunkDispatchArtifacts`:   `/services/server/status/dispatch-artifacts?output_mode=json&count=-1`,
-	`SplunkHealth`:              `/services/server/health/splunkd/details?output_mode=json`,
+	`SplunkIndexerThroughput`:    `/services/server/introspection/indexer?output_mode=json`,
+	`SplunkDataIndexesExtended`:  `/services/data/indexes-extended?output_mode=json&count=-1`,
+	`SplunkIntrospectionQueues`:  `/services/server/introspection/queues?output_mode=json&count=-1`,
+	`SplunkKVStoreStatus`:        `/services/kvstore/status?output_mode=json`,
+	`SplunkDispatchArtifacts`:    `/services/server/status/dispatch-artifacts?output_mode=json&count=-1`,
+	`SplunkHealth`:               `/services/server/health/splunkd/details?output_mode=json`,
+	`SplunkAuthzRolesStatuscode`: `services/authorization/roles`,
 }
 
 type searchResponse struct {

@@ -360,5 +360,13 @@ metrics:
       value_type: int
     attributes: [splunk.feature, splunk.feature.health]
 
+  #`services/authorization/roles`
+  splunk.authz.roles.statuscode:
+    enabled: false
+    description: Gauge tracking the HTTP status code received from the services/authorization/roles endpoint.
+    unit: "{status}"
+    gauge:
+      value_type: int
+
 tests:
   config:
