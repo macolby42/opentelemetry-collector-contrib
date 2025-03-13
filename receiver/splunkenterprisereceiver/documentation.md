@@ -463,6 +463,44 @@ This is the overall status of the kvstore for the given deployment.
 | splunk.kvstore.external | Value denoting if the KV store is using an external service | Any Str |
 | splunk.kvstore.status.value | The string value of the status returned when reporting on KV store using the introspection endpoint | Any Str |
 
+### splunk.search.duration
+
+Gauge tracking the duration in seconds of the last search probe call.
+
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {status} | Gauge | Double |
+
+### splunk.search.initiation
+
+Gauge tracking whether the last search probe successfully initiated a search.
+
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {status} | Gauge | Int |
+
+### splunk.search.status
+
+Gauge tracking the dispatch status of the last search probe.
+
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {status} | Gauge | Int |
+
+#### Attributes
+
+| Name | Description | Values |
+| ---- | ----------- | ------ |
+| splunk.search.state | The dispatch state of the search | Any Str |
+
+### splunk.search.success
+
+Gauge tracking whether the last search probe call was successful with the dispatch state 'DONE'.
+
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {status} | Gauge | Int |
+
 ### splunk.server.introspection.queues.current
 
 Gauge tracking current length of queue. *Note:** Must be pointed at specific indexer `endpoint` and gathers metrics from only that indexer.
