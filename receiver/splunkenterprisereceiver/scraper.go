@@ -102,6 +102,7 @@ func (s *splunkScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 		s.scrapeKVStoreStatus,
 		s.scrapeSearchArtifacts,
 		s.scrapeHealth,
+		s.scrapeSearch,
 	}
 	errChan := make(chan error, len(metricScrapes))
 
@@ -1784,5 +1785,131 @@ func (s *splunkScraper) traverseHealthDetailFeatures(details healthDetails, now 
 			s.mb.RecordSplunkHealthDataPoint(now, 0, k, feature.Health)
 		}
 		s.traverseHealthDetailFeatures(feature, now)
+	}
+}
+
+// Scrape Search Metrics
+func (s *splunkScraper) scrapeSearch(ctx context.Context, now pcommon.Timestamp, errs chan error) {
+	if !s.conf.MetricsBuilderConfig.Metrics.SplunkSearchDuration.Enabled &&
+		!s.conf.MetricsBuilderConfig.Metrics.SplunkSearchInitiation.Enabled &&
+		!s.conf.MetricsBuilderConfig.Metrics.SplunkSearchStatus.Enabled &&
+		!s.conf.MetricsBuilderConfig.Metrics.SplunkSearchSuccess.Enabled {
+		return
+	}
+
+	ctx = context.WithValue(ctx, endpointType("type"), typeCm)
+
+	sr := searchResponse{
+		search: searchDict[`SplunkSearch`],
+	}
+
+	var (
+		req *http.Request
+		res *http.Response
+		err error
+	)
+
+	start := time.Now()
+
+	// TODO: Add search TTL
+	for {
+		req, err = s.splunkClient.createRequest(ctx, &sr)
+		if err != nil {
+			if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchInitiation.Enabled {
+				s.mb.RecordSplunkSearchInitiationDataPoint(now, 0)
+			}
+			errs <- err
+			return
+		}
+
+		res, err = s.splunkClient.makeRequest(req)
+		if err != nil {
+			if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchInitiation.Enabled {
+				s.mb.RecordSplunkSearchInitiationDataPoint(now, 0)
+			}
+			errs <- err
+			return
+		}
+
+		// if its a 204 the body will be empty because we are still waiting on search results
+		err = unmarshallSearchReq(res, &sr)
+		if err != nil {
+			errs <- err
+		}
+		res.Body.Close()
+
+		if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchInitiation.Enabled {
+			if sr.Jobid != nil {
+				s.mb.RecordSplunkSearchInitiationDataPoint(now, 1)
+
+			} else {
+				s.mb.RecordSplunkSearchInitiationDataPoint(now, 0)
+			}
+		}
+
+		// if no errors and 200 returned scrape was successful, return. Note we must make sure that
+		// the 200 is coming after the first request which provides a jobId to retrieve results
+		if sr.Return == 200 && sr.Jobid != nil {
+			break
+		}
+
+		if sr.Return == 204 {
+			time.Sleep(2 * time.Second)
+		}
+
+		if time.Since(start) > s.conf.ControllerConfig.Timeout {
+			errs <- errMaxSearchWaitTimeExceeded
+			return
+		}
+	}
+
+	var metaEntries searchMetaEntries
+	ept := fmt.Sprintf("/services/search/jobs/%s?output_mode=json", *sr.Jobid)
+
+	req, err = s.splunkClient.createAPIRequest(ctx, ept)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	metaRes, err := s.splunkClient.makeRequest(req)
+	if err != nil {
+		errs <- err
+		return
+	}
+	defer metaRes.Body.Close()
+
+	if err := json.NewDecoder(res.Body).Decode(&metaEntries); err != nil {
+		errs <- err
+		return
+	}
+
+	// searchStates list of all Splunk Search Status.
+	searchStates := []string{StateDone, StateFailed, StateFinalizing, StateParsing, StatePaused, StateQueued, StateRunning, ControlError}
+
+	for _, entry := range metaEntries.Entries {
+		if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchDuration.Enabled {
+			s.mb.RecordSplunkSearchDurationDataPoint(now, entry.Content.Duration)
+		}
+
+		if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchStatus.Enabled {
+			// record for all possible search states
+			var value int64
+			for _, state := range searchStates {
+				value = 0
+				if state == entry.Content.DispatchState {
+					value = 1
+				}
+				s.mb.RecordSplunkSearchStatusDataPoint(now, value, entry.Content.DispatchState)
+			}
+		}
+
+		if s.conf.MetricsBuilderConfig.Metrics.SplunkSearchSuccess.Enabled {
+			if entry.Content.DispatchState == StateDone {
+				s.mb.RecordSplunkSearchSuccessDataPoint(now, 1)
+			} else {
+				s.mb.RecordSplunkSearchSuccessDataPoint(now, 0)
+			}
+		}
 	}
 }
